@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Turpialcut · Vender</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2790%27>🪚</text></svg>">
+<style>
+:root{--bg:#faf8f5;--card:#fff;--tx:#1b1d22;--muted:#5d6470;--edge:#e4dfd7;--or:#f6a018;--orx:#a85200;--ok:#2f9e63;--err:#c0392b}
+@media (prefers-color-scheme:dark){:root{--bg:#121316;--card:#1d1f24;--tx:#f2f1ee;--muted:#a9aeb7;--edge:#33363d;--orx:#ffb066;--err:#ff7b6b}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:560px;margin:0 auto;padding:16px 16px 60px}
+h1{font-size:26px;margin:6px 0 2px;letter-spacing:-.3px}
+.sub{color:var(--muted);margin:0 0 14px;font-size:14px}
+.card{background:var(--card);border:1px solid var(--edge);border-radius:18px;padding:16px;margin:0 0 14px}
+label{display:block;font-weight:700;font-size:13px;margin:12px 0 4px}
+input,textarea{width:100%;padding:12px 12px;border-radius:12px;border:1.5px solid var(--edge);background:transparent;color:inherit;font:inherit}
+input:focus,textarea:focus{outline:2px solid var(--or);border-color:var(--or)}
+textarea{min-height:84px;resize:vertical}
+.fila{display:flex;gap:8px;flex-wrap:wrap}
+.chip{flex:1;min-width:130px;padding:12px;border-radius:12px;border:2px solid var(--edge);background:transparent;color:inherit;font:inherit;font-weight:700;cursor:pointer}
+.chip.on{border-color:var(--or);background:rgba(246,160,24,.15)}
+button.main{width:100%;margin-top:16px;padding:15px;border:0;border-radius:14px;background:var(--or);color:#1b1b1b;font:inherit;font-weight:800;font-size:17px;cursor:pointer}
+button.sec{width:100%;margin-top:10px;padding:13px;border-radius:14px;border:2px solid var(--or);background:transparent;color:inherit;font:inherit;font-weight:700;cursor:pointer}
+button:disabled{opacity:.55;cursor:default}
+.msg{margin-top:12px;font-weight:700}.msg.err{color:var(--err)}.msg.ok{color:var(--ok)}
+.muted{color:var(--muted);font-size:13px}
+.folio{font-size:34px;font-weight:900;letter-spacing:-.5px}
+a{color:var(--orx)}
+.oculto{display:none}
+.top{display:flex;justify-content:space-between;align-items:center}
+.top button{background:none;border:0;color:var(--muted);font:inherit;cursor:pointer;text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><h1>🪚 Vender</h1><button id="salir" class="oculto" type="button">Salir</button></div>
+  <p class="sub" id="sub">Registra una venta; queda en la misma lista de pedidos de la app.</p>
+
+  <div id="vConfig" class="card oculto">
+    <b>Falta la clave pública del proyecto</b>
+    <p class="muted">Abre este enlace una sola vez en este teléfono con la clave al final (<code>…/vender/#k=TU_CLAVE</code>). Se guarda solo en este teléfono y no se publica en internet.</p>
+  </div>
+
+  <div id="vLogin" class="card oculto">
+    <label for="correo">Correo</label><input id="correo" type="email" autocomplete="username" inputmode="email">
+    <label for="clave">Contraseña</label><input id="clave" type="password" autocomplete="current-password">
+    <button class="main" id="entrar" type="button">Entrar</button>
+    <div class="msg err" id="eLogin"></div>
+  </div>
+
+  <div id="vSinPermiso" class="card oculto"><b>Tu usuario no tiene permiso de ventas en este local.</b><p class="muted">Pídele al administrador que te habilite el módulo Venta.</p></div>
+
+  <form id="vVenta" class="card oculto" autocomplete="off">
+    <div class="muted" id="local"></div>
+    <label for="cliente">Cliente *</label><input id="cliente" maxlength="80" placeholder="Nombre del cliente">
+    <label for="tel">Teléfono (para avisarle por WhatsApp)</label><input id="tel" maxlength="20" inputmode="tel" placeholder="9 1234 5678">
+    <label for="vendedor">Vendedor</label><input id="vendedor" maxlength="60">
+    <label for="boleta">N.º boleta / venta</label><input id="boleta" maxlength="30" inputmode="numeric">
+    <label for="detalle">Detalle de piezas / material *</label><textarea id="detalle" maxlength="400" placeholder="Ej. Melamina blanca 18 mm · 6 piezas"></textarea>
+    <label>Servicios contratados</label>
+    <div class="fila" id="servicios">
+      <button type="button" class="chip on" data-v="ambos">✂ Corte y enchape</button>
+      <button type="button" class="chip" data-v="corte">✂ Solo corte</button>
+      <button type="button" class="chip" data-v="enchape">▭ Solo enchape</button>
+    </div>
+    <label for="fecha">Fecha estimada de entrega</label><input id="fecha" maxlength="10" placeholder="año-mes-día · vacía = fecha base">
+    <label for="notas">Observaciones</label><textarea id="notas" maxlength="300" style="min-height:60px"></textarea>
+    <button class="main" id="guardar" type="submit">Guardar venta</button>
+    <div class="msg err" id="eVenta"></div>
+  </form>
+
+  <div id="vListo" class="card oculto">
+    <div class="msg ok">✅ Venta registrada</div>
+    <div class="folio" id="folio"></div>
+    <p class="muted">Ya está en producción y aparece en la app del local.</p>
+    <p id="linkSeg" class="muted"></p>
+    <button class="main" id="wsp" type="button">📲 Avisar al cliente por WhatsApp</button>
+    <button class="sec" id="copiar" type="button">🔗 Copiar link de seguimiento</button>
+    <button class="sec" id="wspApp" type="button">📱 Invitar a usar la app</button>
+    <button class="sec" id="otra" type="button">＋ Registrar otra venta</button>
+    <div class="msg" id="eListo"></div>
+  </div>
+</div>
+
+<script>
+// ====== Configuración pública (nada secreto aquí) ======
+const PROJECT_ID = 'ferryplac-a7a18';
+const SEGUIMIENTO = 'https://turpial91.github.io/turpialcut-seguimiento/';
+// La clave pública del proyecto NO se publica en el código: se entrega una vez en el enlace (#k=…) y queda en este teléfono.
+const LS = (() => { try { return window.localStorage; } catch (e) { return { getItem: () => null, setItem() {}, removeItem() {} }; } })();
+(function leerClave() {
+  const m = location.hash.match(/[#&]k=([A-Za-z0-9_\-]{20,80})/); const a = location.hash.match(/[#&]app=([^&]+)/);
+  if (m) LS.setItem('tc_k', m[1]); if (a) LS.setItem('tc_app', decodeURIComponent(a[1]));
+  if (m || a) history.replaceState(null, '', location.pathname + location.search);
+})();
+const API_KEY = LS.getItem('tc_k') || '';
+const APP_URL = LS.getItem('tc_app') || '';
+const BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
+const $ = id => document.getElementById(id);
+const enc = encodeURIComponent;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+let sesion = null, empresa = null, nombreUsuario = '', servicio = 'ambos', ultimo = null;
+
+// ---------- Autenticación (Firebase Auth REST) ----------
+async function authPost(url, cuerpo, tipo) {
+  const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': tipo || 'application/json' }, body: cuerpo });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error((j.error && j.error.message) || 'auth');
+  return j;
+}
+async function entrar(correo, clave) {
+  const j = await authPost(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${API_KEY}`, JSON.stringify({ email: correo, password: clave, returnSecureToken: true }));
+  sesion = { uid: j.localId, email: correo, id: j.idToken, ref: j.refreshToken, exp: Date.now() + (+j.expiresIn - 60) * 1000 };
+  try { sessionStorage.setItem('tc_ses', JSON.stringify(sesion)); } catch (e) {}
+}
+async function token() {
+  if (!sesion) throw new Error('sin sesión');
+  if (Date.now() >= sesion.exp) {
+    const j = await authPost(`https://securetoken.googleapis.com/v1/token?key=${API_KEY}`, `grant_type=refresh_token&refresh_token=${enc(sesion.ref)}`, 'application/x-www-form-urlencoded');
+    sesion.id = j.id_token; sesion.ref = j.refresh_token || sesion.ref; sesion.exp = Date.now() + (+j.expires_in - 60) * 1000;
+    try { sessionStorage.setItem('tc_ses', JSON.stringify(sesion)); } catch (e) {}
+  }
+  return sesion.id;
+}
+
+// ---------- Firestore REST ----------
+const S = v => ({ stringValue: String(v == null ? '' : v) });
+const I = v => ({ integerValue: String(Math.round(v)) });
+const val = (d, k) => { const v = d && d.fields && d.fields[k]; return v ? (v.stringValue !== undefined ? v.stringValue : (v.integerValue !== undefined ? v.integerValue : '')) : ''; };
+async function fsGet(ruta) {
+  const r = await fetch(`${BASE}/${ruta}`, { headers: { Authorization: 'Bearer ' + await token() } });
+  if (r.status === 404) return null;
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error((j.error && (j.error.status || j.error.message)) || ('http ' + r.status));
+  return j;
+}
+async function fsPost(destino, cuerpo) {
+  const r = await fetch(destino, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + await token() }, body: JSON.stringify(cuerpo) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error((j.error && ((j.error.status || '') + ' ' + (j.error.message || ''))) || ('http ' + r.status));
+  return j;
+}
+const nombreDoc = ruta => `projects/${PROJECT_ID}/databases/(default)/documents/${ruta}`;
+
+// ---------- Local y permisos (misma regla que la app) ----------
+function modulos(rol, permisos) {
+  const t = new Set(String(permisos || '').split(',').map(x => x.trim()).filter(Boolean));
+  if (!t.size) { if (rol === 'admin') ['venta', 'produccion', 'admin'].forEach(x => t.add(x)); else if (rol === 'meson') t.add('venta'); else if (rol === 'ambos') { t.add('venta'); t.add('produccion'); } else if (!['corte', 'enchape', 'taller'].includes(rol)) t.add('venta'); }
+  return t;
+}
+async function resolverLocal() {
+  const p = await fsGet('usuarios/' + sesion.uid);
+  nombreUsuario = val(p, 'nombre') || sesion.email;
+  const lista = await fsGet('usuarios/' + sesion.uid + '/empresas?pageSize=20');
+  const docs = (lista && lista.documents) || [];
+  for (const d of docs) {
+    const org = decodeURIComponent(d.name.split('/').pop());
+    const m = await fsGet('organizaciones/' + enc(org) + '/miembros/' + sesion.uid).catch(() => null);
+    if (!m) continue;
+    if ((val(m, 'estado') || 'activo') !== 'activo') continue;
+    const mods = modulos(val(m, 'rol'), val(m, 'permisos'));
+    empresa = { org, nombre: val(d, 'nombre') || 'Local', venta: mods.has('venta') || mods.has('admin') };
+    return;
+  }
+  empresa = null;
+}
+
+// ---------- Venta ----------
+function folioTexto(n) { return 'FP-' + String(n).padStart(6, '0'); }
+async function folioConocido(org) {
+  // El contador puede ir detrás de pedidos antiguos: se toma el mayor folio de los últimos pedidos.
+  try {
+    const r = await fsPost(`${BASE}/organizaciones/${enc(org)}:runQuery`, { structuredQuery: { from: [{ collectionId: 'ordenes' }], orderBy: [{ field: { fieldPath: 'updated' }, direction: 'DESCENDING' }], limit: 8 } });
+    return Math.max(0, ...r.filter(x => x.document).map(x => parseInt(String(val(x.document, 'folio')).replace(/\D/g, ''), 10) || 0));
+  } catch (e) { return 0; }
+}
+async function reservarFolio(org) {
+  const ruta = `organizaciones/${enc(org)}/meta/folio`, conocido = await folioConocido(org);
+  for (let i = 0; i < 6; i++) {
+    const d = await fsGet(ruta);
+    const n = Math.max(parseInt(val(d, 'n'), 10) || 0, conocido) + 1;
+    try { await fsPost(`${BASE}:commit`, { writes: [{ update: { name: nombreDoc(ruta), fields: { n: I(n) } }, currentDocument: d ? { updateTime: d.updateTime } : { exists: false } }] }); return n; }
+    catch (e) { if (/FAILED_PRECONDITION|ABORTED|ALREADY_EXISTS|NOT_FOUND/.test(e.message)) { await sleep(150 + Math.random() * 300); continue; } throw e; }
+  }
+  throw new Error('No se pudo reservar el folio. Intenta de nuevo.');
+}
+function tokenSeg() { const A = 'abcdefghjkmnpqrstuvwxyz23456789', b = new Uint32Array(8); crypto.getRandomValues(b); return Array.from(b, x => A[x % A.length]).join(''); }
+function habiles(desde, n) { const d = new Date(desde); let falta = n; while (falta > 0) { d.setDate(d.getDate() + 1); const w = d.getDay(); if (w !== 0 && w !== 6) falta--; } return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function telefonoWsp(t) { const d = String(t || '').replace(/\D/g, ''); if (d.startsWith('56')) return d.length >= 11 ? d : ''; if (d.length === 9 && d[0] === '9') return '56' + d; if (d.length === 8) return '569' + d; return ''; }
+function validar(v) {
+  if (!v.cliente.trim() || !v.detalle.trim()) return 'Completa cliente y detalle de piezas.';
+  if (v.fecha.trim() && !/^\d{4}-\d{2}-\d{2}$/.test(v.fecha.trim())) return 'La fecha va como año-mes-día, por ejemplo 2026-10-27. Déjala vacía para usar la fecha base.';
+  return null;
+}
+async function guardarVenta(v) {
+  const ahora = Date.now(), org = empresa.org, quien = nombreUsuario;
+  const n = await reservarFolio(org), folio = folioTexto(n);
+  const id = 'fp-' + ahora + '-' + Math.random().toString(36).slice(2, 7);
+  const corte = v.servicio !== 'enchape', ench = v.servicio !== 'corte';
+  const base = ench ? 7 : 5;                      // plazo base en días hábiles; la app recalcula con la cola cuando se guarda desde ella
+  const fecha = v.fecha.trim() || habiles(ahora, base);
+  const seg = tokenSeg();
+  const orden = { id, folio, created: ahora, updated: ahora, org, cliente: v.cliente.trim(), telefono: v.tel.trim(), vendedor: (v.vendedor.trim() || quien), boleta: v.boleta.trim(),
+    detalle: v.detalle.trim(), fecha, notas: v.notas.trim(), servicio: v.servicio, corteRequerido: corte, enchapeRequerido: ench,
+    corte: corte ? 'Pendiente' : 'No requiere', enchape: ench ? 'Pendiente' : 'No requiere',
+    historial: [{ estado: 'Venta registrada (web)', fecha: ahora, usuario: quien }], seg, hitos: { recibido: ahora }, origen: 'web' };
+  if (!v.fecha.trim()) { orden.fechaProvisional = true; orden.razonFecha = 'Fecha base: venta registrada desde la web.'; }
+  const camposOrden = { json: S(JSON.stringify(orden)), updated: I(ahora), folio: S(folio), clienteUid: S(''), solicitud: S('') };
+  const camposSeg = { org: S(org), folio: S(folio), cliente: S(orden.cliente), local: S(empresa.nombre), fecha: S(fecha), servicio: S(v.servicio), detalle: S(orden.detalle.slice(0, 120)),
+    corte: S(orden.corte), enchape: S(orden.enchape), estado: S('En producción'), hitos: S(JSON.stringify(orden.hitos)), horario: S(''), actualizado: I(ahora) };
+  // Pedido y seguimiento en un solo commit atómico: o quedan los dos o ninguno.
+  await fsPost(`${BASE}:commit`, { writes: [
+    { update: { name: nombreDoc(`organizaciones/${enc(org)}/ordenes/${enc(id)}`), fields: camposOrden }, currentDocument: { exists: false } },
+    { update: { name: nombreDoc('seguimiento/' + seg), fields: camposSeg } }
+  ] });
+  return { folio, seg, orden };
+}
+
+// ---------- Pantallas ----------
+function mostrar(...ids) { for (const x of ['vConfig', 'vLogin', 'vSinPermiso', 'vVenta', 'vListo']) $(x).classList.toggle('oculto', !ids.includes(x)); $('salir').classList.toggle('oculto', !sesion); }
+function msgWsp(o, link) {
+  const nom = (o.cliente.split(/\s+/)[0] || '');
+  const serv = { ambos: 'Corte y enchape', corte: 'Corte', enchape: 'Enchape' }[o.servicio];
+  return `*¡Hola${nom ? ' ' + nom : ''}!* 👋\nRecibimos su pedido en *${empresa.nombre}* ✅\n\n🧾 *Pedido:* ${o.folio}\n🛠️ *Servicio:* ${serv}\n📐 *Detalle:* ${o.detalle}\n📅 *Entrega estimada:* ${o.fecha}\n\n📍 *Siga su pedido en tiempo real:*\n${link}\n\nLe avisaremos por aquí cuando esté listo para retiro.\n_Gracias por preferirnos_ 🙌`;
+}
+async function iniciar() {
+  if (!API_KEY) { mostrar('vConfig'); return; }
+  try { const g = JSON.parse(sessionStorage.getItem('tc_ses') || 'null'); if (g && g.ref) sesion = g; } catch (e) {}
+  if (!sesion) { mostrar('vLogin'); return; }
+  try { await resolverLocal(); } catch (e) { sesion = null; try { sessionStorage.removeItem('tc_ses'); } catch (x) {} mostrar('vLogin'); return; }
+  if (!empresa || !empresa.venta) { mostrar('vSinPermiso'); return; }
+  $('local').textContent = '🏢 ' + empresa.nombre + ' · ' + sesion.email; $('vendedor').value = nombreUsuario;
+  mostrar('vVenta');
+}
+$('entrar').onclick = async () => {
+  const b = $('entrar'); $('eLogin').textContent = ''; b.disabled = true;
+  try { await entrar($('correo').value.trim(), $('clave').value); $('clave').value = ''; await iniciar(); }
+  catch (e) { $('eLogin').textContent = /INVALID|EMAIL|PASSWORD|CREDENTIAL/i.test(e.message) ? 'Correo o contraseña incorrectos.' : 'No pude entrar. Revisa tu conexión.'; }
+  b.disabled = false;
+};
+$('salir').onclick = () => { sesion = null; empresa = null; try { sessionStorage.removeItem('tc_ses'); } catch (e) {} mostrar('vLogin'); };
+$('servicios').onclick = e => { const b = e.target.closest('.chip'); if (!b) return; servicio = b.dataset.v; document.querySelectorAll('#servicios .chip').forEach(c => c.classList.toggle('on', c === b)); };
+$('vVenta').onsubmit = async e => {
+  e.preventDefault();
+  const v = { cliente: $('cliente').value, tel: $('tel').value, vendedor: $('vendedor').value, boleta: $('boleta').value, detalle: $('detalle').value, fecha: $('fecha').value, notas: $('notas').value, servicio };
+  const err = validar(v); const el = $('eVenta'); el.textContent = '';
+  if (err) { el.textContent = err; return; }
+  if (!telefonoWsp(v.tel) && !$('vVenta').dataset.sinTel) { $('vVenta').dataset.sinTel = '1'; el.textContent = '⚠️ Sin un teléfono válido no podrás avisarle por WhatsApp. Toca «Guardar venta» otra vez para guardar igual.'; return; }
+  const b = $('guardar'); b.disabled = true; b.textContent = 'Guardando…';
+  try {
+    ultimo = await guardarVenta(v);
+    $('folio').textContent = ultimo.folio; const link = SEGUIMIENTO + '?c=' + ultimo.seg; ultimo.link = link;
+    $('linkSeg').textContent = link; $('wsp').disabled = !telefonoWsp(ultimo.orden.telefono); $('wspApp').classList.toggle('oculto', !telefonoWsp(ultimo.orden.telefono));
+    $('eListo').textContent = ''; delete $('vVenta').dataset.sinTel; mostrar('vListo');
+  } catch (er) { el.textContent = /PERMISSION|permiso/i.test(er.message) ? 'Firebase no permitió guardar con este usuario. Avisa al administrador.' : 'No se pudo guardar. Revisa tu conexión e inténtalo de nuevo. (' + String(er.message).slice(0, 80) + ')'; }
+  b.disabled = false; b.textContent = 'Guardar venta';
+};
+$('wsp').onclick = () => { const o = ultimo.orden; window.open('https://wa.me/' + telefonoWsp(o.telefono) + '?text=' + enc(msgWsp(o, ultimo.link)), '_blank'); };
+$('wspApp').onclick = () => { const o = ultimo.orden; const t = `¡Hola${o.cliente ? ' ' + o.cliente.split(/\s+/)[0] : ''}! Con la app de ${empresa.nombre} puede hacer sus próximos pedidos y ver su avance desde el teléfono.` + (APP_URL ? '\nInstálela aquí: ' + APP_URL : '\nPídala en el local.'); window.open('https://wa.me/' + telefonoWsp(o.telefono) + '?text=' + enc(t), '_blank'); };
+$('copiar').onclick = async () => { try { await navigator.clipboard.writeText(ultimo.link); $('eListo').textContent = 'Link copiado.'; } catch (e) { $('eListo').textContent = ultimo.link; } };
+$('otra').onclick = () => { for (const x of ['cliente', 'tel', 'boleta', 'detalle', 'fecha', 'notas']) $(x).value = ''; mostrar('vVenta'); };
+iniciar();
+</script>
+</body>
+</html>
