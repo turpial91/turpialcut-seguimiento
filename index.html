@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Seguimiento de tu pedido · Turpialcut</title>
+<!--
+  LISTA PARA PUBLICAR EN UN SITIO DE HOSTING APARTE (ver docs/PUBLICAR_SEGUIMIENTO_DINAMICO.md). NO está publicada.
+  (texto original de la propuesta:) Sustituiría a la página /s/<código> que hoy está en Firebase Hosting, cuyo código no está en este repositorio.
+  Lee el documento público `seguimiento/{código}` (reglas 4.48: lectura sin sesión si no tiene `tel`) con la API REST de Firestore.
+  Antes de publicarla hay que: 1) poner PROJECT_ID y API_KEY públicos en las dos constantes de abajo, 2) revisar que el rewrite `/s/**` apunte aquí,
+  3) autorización expresa del dueño para desplegar Hosting. No se despliega sola.
+-->
+<style>
+:root{--bg:#f7f4ef;--card:#fff;--ink:#1b1f27;--muted:#6b7280;--line:#e5e0d6;--ok:#2f9e63;--warn:#f6a018;--cut:#3b6fd4;--edge:#7c3aed}
+@media (prefers-color-scheme:dark){:root{--bg:#141414;--card:#201e1c;--ink:#f3efe8;--muted:#a49f96;--line:#33302c}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:560px;margin:0 auto;padding:16px}
+.marca{display:flex;align-items:center;gap:10px;margin:4px 0 14px}
+.marca b{font-size:20px;letter-spacing:.2px}.marca small{color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:20px;margin-bottom:14px;box-shadow:0 6px 24px rgba(0,0,0,.06)}
+.hola{color:var(--muted);margin:0 0 4px}
+.estado{display:flex;align-items:center;gap:14px;margin:6px 0 10px}
+.estado h1{margin:0;font-size:30px;line-height:1.1}
+.icono{width:64px;height:64px;flex:none;display:grid;place-items:center;border-radius:20px;font-size:34px;background:color-mix(in srgb,var(--c) 18%,transparent);color:var(--c)}
+.folio{display:inline-block;padding:4px 12px;border-radius:999px;font-weight:800;font-size:14px;background:color-mix(in srgb,var(--c) 16%,transparent);color:var(--c)}
+.barra{height:12px;border-radius:999px;background:var(--line);overflow:hidden;margin:16px 0 8px;position:relative}
+.barra i{display:block;height:100%;width:0;border-radius:999px;background:var(--c);transition:width 1.2s cubic-bezier(.2,.8,.2,1);position:relative;overflow:hidden}
+.barra i::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);transform:translateX(-100%);animation:brillo 1.8s infinite}
+.pasos{list-style:none;margin:0;padding:0}
+.paso{display:flex;gap:14px;position:relative;padding-bottom:20px;opacity:0;transform:translateY(8px);animation:entra .5s forwards}
+.paso:last-child{padding-bottom:0}
+.paso::before{content:"";position:absolute;left:19px;top:40px;bottom:0;width:3px;background:var(--line)}
+.paso:last-child::before{display:none}
+.paso.hecho::before{background:var(--ok)}
+.punto{width:40px;height:40px;border-radius:50%;flex:none;display:grid;place-items:center;font-weight:900;border:3px solid var(--line);background:var(--card);color:var(--muted);position:relative}
+.hecho .punto{background:var(--ok);border-color:var(--ok);color:#fff}
+.hecho .punto svg{stroke-dasharray:24;stroke-dashoffset:24;animation:trazo .5s .25s forwards}
+.actual .punto{border-color:var(--c);color:var(--c)}
+.actual .punto::after{content:"";position:absolute;inset:-7px;border-radius:50%;border:3px solid var(--c);opacity:.5;animation:pulso 1.6s infinite}
+.txt b{display:block;font-size:17px}.txt span{color:var(--muted);font-size:14px}
+.det{color:var(--muted);margin:14px 0 0;font-size:14px}
+.pie{text-align:center;color:var(--muted);font-size:13px;margin:8px 0 24px;display:flex;align-items:center;justify-content:center;gap:8px}
+.giro{width:12px;height:12px;border:2px solid var(--muted);border-top-color:transparent;border-radius:50%;animation:gira 1s linear infinite;visibility:hidden}
+.refresca .giro{visibility:visible}
+.horario{white-space:pre-line;color:var(--muted);font-size:14px;margin:6px 0 0}
+/* iconos con movimiento propio según la etapa */
+.mov-sierra{animation:vibra .35s infinite}
+.mov-canto{animation:desliza 1.4s ease-in-out infinite}
+.mov-caja{animation:salta 1.1s ease-in-out infinite}
+.mov-ok{animation:pop .6s both}
+.confeti{position:fixed;left:0;top:0;width:100%;height:0;pointer-events:none;z-index:9}
+.confeti i{position:absolute;top:-10px;width:9px;height:14px;border-radius:2px;animation:cae 2.4s ease-in forwards}
+@keyframes brillo{to{transform:translateX(100%)}}
+@keyframes entra{to{opacity:1;transform:none}}
+@keyframes trazo{to{stroke-dashoffset:0}}
+@keyframes pulso{0%{transform:scale(.9);opacity:.7}100%{transform:scale(1.35);opacity:0}}
+@keyframes gira{to{transform:rotate(360deg)}}
+@keyframes vibra{0%,100%{transform:rotate(-7deg)}50%{transform:rotate(7deg)}}
+@keyframes desliza{0%,100%{transform:translateX(-5px)}50%{transform:translateX(5px)}}
+@keyframes salta{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes pop{0%{transform:scale(.4)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+@keyframes cae{to{transform:translateY(105vh) rotate(540deg);opacity:.9}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.paso{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="marca"><picture><source media="(prefers-color-scheme:dark)" srcset="turpial_wordmark_claro.png"><img src="turpial_wordmark.png" alt="Turpialcut" height="34" style="height:34px;width:auto"></picture><small id="local"></small></div>
+  <div id="vista"><div class="card"><p class="hola">Buscando tu pedido…</p></div></div>
+  <div class="pie" id="pie"><span class="giro"></span><span id="pieTxt"></span></div>
+</div>
+<div class="confeti" id="confeti"></div>
+<script>
+// ====== CONFIGURACIÓN PÚBLICA (completar al publicar) ======
+const PROJECT_ID = 'ferryplac-a7a18';   // proyecto de Firebase del local (Firestore público de solo lectura: seguimiento/{código})
+const API_KEY = '';   // clave web pública del proyecto (la misma de turpial-config.json); se pone al publicar
+// ===========================================================
+// El código del pedido puede venir como /s/<código> (Firebase Hosting), ?c=<código> o #<código> (GitHub Pages, que no reescribe rutas).
+const seg = ((location.pathname.match(/\/s\/([a-z0-9-]+)/i) || [])[1] || new URLSearchParams(location.search).get('c') || location.hash.replace(/^#\/?/, '') || '').replace(/[^a-z0-9-]/gi, '').slice(0, 40);
+const $ = id => document.getElementById(id);
+const ESCAPE = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let celebrado = false;
+
+function f(d, k) { const v = d.fields && d.fields[k]; return v ? (v.stringValue !== undefined ? v.stringValue : v.integerValue) : ''; }
+function hora(ms) {
+  if (!ms) return '';
+  const d = new Date(+ms), hoy = new Date(), ayer = new Date(Date.now() - 864e5);
+  const h = d.toLocaleTimeString('es-CL', {hour: '2-digit', minute: '2-digit'});
+  const igual = (a, b) => a.toDateString() === b.toDateString();
+  return (igual(d, hoy) ? 'Hoy' : igual(d, ayer) ? 'Ayer' : d.toLocaleDateString('es-CL', {day: 'numeric', month: 'short'})) + ', ' + h;
+}
+const OK = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+
+function modelo(d) {
+  const corte = f(d, 'corte'), ench = f(d, 'enchape'), estado = f(d, 'estado');
+  let h = {}; try { h = JSON.parse(f(d, 'hitos') || '{}'); } catch (e) {}
+  const pasos = [{t: 'Pedido recibido', ms: h.recibido, hecho: true}];
+  if (corte !== 'No requiere') pasos.push({t: corte === 'Listo' ? 'Corte terminado' : 'Corte', ms: h.corteFin || h.corteIni, hecho: corte === 'Listo', ahora: corte === 'En proceso', nota: corte === 'En proceso' ? 'En proceso ahora' : corte === 'Pendiente' ? 'En espera' : ''});
+  if (ench !== 'No requiere') pasos.push({t: ench === 'Listo' ? 'Enchape terminado' : 'Enchape', ms: h.encFin || h.encIni, hecho: ench === 'Listo', ahora: ench === 'En proceso', nota: ench === 'En proceso' ? 'En proceso ahora' : ench === 'Pendiente' ? 'En espera' : ''});
+  const listo = /listo/i.test(estado) || /entregado|retirado/i.test(estado);
+  const retirado = /entregado|retirado/i.test(estado);
+  pasos.push({t: 'Listo para retiro', ms: h.listo, hecho: listo});
+  pasos.push({t: 'Retirado', ms: h.entregado, hecho: retirado});
+  const hechos = pasos.filter(p => p.hecho).length;
+  // el primer paso no hecho es el «actual» si ninguno está explícitamente en proceso
+  if (!pasos.some(p => p.ahora)) { const p = pasos.find(x => !x.hecho); if (p) p.ahora = true; }
+  const pct = Math.round(100 * hechos / pasos.length);
+  let c = 'var(--cut)', ic = '🪚', cls = 'mov-sierra', titulo = 'En producción';
+  if (corte === 'Listo' && ench !== 'No requiere' && ench !== 'Listo') { c = 'var(--edge)'; ic = '🎞️'; cls = 'mov-canto'; titulo = 'Enchapando tus piezas'; }
+  else if (corte === 'Pendiente' || corte === 'No requiere' && ench === 'Pendiente') { c = 'var(--warn)'; ic = '🕒'; cls = ''; titulo = 'En cola'; }
+  if (listo && !retirado) { c = 'var(--ok)'; ic = '📦'; cls = 'mov-caja'; titulo = 'Listo para retiro'; }
+  if (retirado) { c = 'var(--ok)'; ic = '✅'; cls = 'mov-ok'; titulo = 'Retirado'; }
+  if (/rechazado/i.test(estado)) { c = '#d64545'; ic = '❌'; cls = ''; titulo = 'No fue aceptado'; }
+  return {pasos, pct, c, ic, cls, titulo, listo, retirado, hechos};
+}
+
+function pintar(d) {
+  const m = modelo(d), nombre = (f(d, 'cliente') || '').split(' ')[0];
+  $('local').textContent = f(d, 'local');
+  const pasos = m.pasos.map((p, i) => `<li class="paso ${p.hecho ? 'hecho' : ''} ${p.ahora && !p.hecho ? 'actual' : ''}" style="animation-delay:${i * 90}ms">
+      <div class="punto">${p.hecho ? OK : (i + 1)}</div>
+      <div class="txt"><b>${ESCAPE(p.t)}</b><span>${p.hecho ? ESCAPE(hora(p.ms)) : ESCAPE(p.nota || '')}</span></div></li>`).join('');
+  const fecha = f(d, 'fecha'), horario = f(d, 'horario');
+  $('vista').innerHTML = `
+    <div class="card" style="--c:${m.c}">
+      <p class="hola">${nombre ? 'Hola ' + ESCAPE(nombre) + ', su pedido está:' : 'Su pedido está:'}</p>
+      <div class="estado"><div class="icono"><span class="${m.cls}">${m.ic}</span></div><h1>${ESCAPE(m.titulo)}</h1></div>
+      <span class="folio">Pedido ${ESCAPE(f(d, 'folio'))}</span>
+      <div class="barra" aria-label="Avance ${m.pct}%"><i id="relleno"></i></div>
+      <div class="det">${m.retirado ? '¡Gracias por su compra!' : m.listo ? 'Puede pasar a retirarlo. Traiga su cédula de identidad.' : (fecha ? 'Entrega estimada: ' + ESCAPE(fecha) : 'Le avisaremos cuando esté listo.')}</div>
+    </div>
+    <div class="card" style="--c:${m.c}"><ol class="pasos">${pasos}</ol><p class="det">${ESCAPE(f(d, 'detalle'))}</p>${horario && m.listo && !m.retirado ? '<p class="horario"><b>Horario de retiro</b>\n' + ESCAPE(horario) + '</p>' : ''}</div>`;
+  requestAnimationFrame(() => requestAnimationFrame(() => { const r = $('relleno'); if (r) r.style.width = m.pct + '%'; }));
+  if (m.listo && !m.retirado && !celebrado) { celebrado = true; confeti(); }
+}
+
+function confeti() {
+  if (matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+  const box = $('confeti'), cols = ['#f6a018', '#2f9e63', '#3b6fd4', '#7c3aed', '#d64545'];
+  for (let i = 0; i < 46; i++) {
+    const e = document.createElement('i');
+    e.style.left = Math.random() * 100 + '%'; e.style.background = cols[i % cols.length];
+    e.style.animationDelay = (Math.random() * .6) + 's'; e.style.animationDuration = (1.8 + Math.random() * 1.4) + 's';
+    box.appendChild(e);
+  }
+  setTimeout(() => box.innerHTML = '', 4200);
+}
+
+async function cargar() {
+  document.body.classList.add('refresca');
+  try {
+    const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/seguimiento/${encodeURIComponent(seg)}` + (API_KEY ? '?key=' + API_KEY : '');
+    const r = await fetch(url);
+    if (r.status === 404 || r.status === 403) throw new Error('no');
+    if (!r.ok) throw new Error('red');
+    pintar(await r.json());
+    $('pieTxt').textContent = 'Se actualiza solo · última revisión ' + new Date().toLocaleTimeString('es-CL', {hour: '2-digit', minute: '2-digit'});
+  } catch (e) {
+    if (e.message === 'no' && !$('relleno')) $('vista').innerHTML = '<div class="card"><h1 style="font-size:24px;margin:0 0 6px">No encontramos este pedido</h1><p class="hola">Revise que el link esté completo o pregunte en el local.</p></div>';
+    else $('pieTxt').textContent = 'Sin conexión · reintentando…';
+  }
+  document.body.classList.remove('refresca');
+}
+if (!seg) { $('vista').innerHTML = '<div class="card"><h1 style="font-size:24px;margin:0">Falta el código del pedido</h1></div>'; }
+else { cargar(); setInterval(() => { if (!document.hidden) cargar(); }, 30000); document.addEventListener('visibilitychange', () => { if (!document.hidden) cargar(); }); }
+</script>
+</body>
+</html>
