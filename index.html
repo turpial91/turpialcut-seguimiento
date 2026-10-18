@@ -132,7 +132,8 @@ function pintar(d) {
       <div class="barra" aria-label="Avance ${m.pct}%"><i id="relleno"></i></div>
       <div class="det">${m.retirado ? '¡Gracias por su compra!' : m.listo ? 'Puede pasar a retirarlo. Traiga su cédula de identidad.' : (fecha ? 'Entrega estimada: ' + ESCAPE(fecha) : 'Le avisaremos cuando esté listo.')}</div>
     </div>
-    <div class="card" style="--c:${m.c}"><ol class="pasos">${pasos}</ol><p class="det">${ESCAPE(f(d, 'detalle'))}</p>${f(d, 'cliente') ? '<p class="det"><b>Cliente:</b> ' + ESCAPE(f(d, 'cliente')) + '</p>' : ''}${horario && m.listo && !m.retirado ? '<p class="horario"><b>Horario de retiro</b>\n' + ESCAPE(horario) + '</p>' : ''}</div>`;
+    <div class="card" style="--c:${m.c}"><ol class="pasos">${pasos}</ol><p class="det">${ESCAPE(f(d, 'detalle'))}</p>${f(d, 'cliente') ? '<p class="det"><b>Cliente:</b> ' + ESCAPE(f(d, 'cliente')) + '</p>' : ''}${f(d, 'planoNombre') ? '<p class="det"><b>Su plano de corte (PDF)</b></p><p class="det" style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" id="planoVer" style="flex:1;min-width:130px;padding:12px 14px;border-radius:12px;border:0;font:inherit;font-weight:700;background:#f6a018;color:#1b1b1b">Ver plano</button><button type="button" id="planoBajar" style="flex:1;min-width:130px;padding:12px 14px;border-radius:12px;border:2px solid #f6a018;font:inherit;font-weight:700;background:transparent;color:inherit">Descargar</button></p><p class="det" id="planoMsg"></p>' : ''}${horario && m.listo && !m.retirado ? '<p class="horario"><b>Horario de retiro</b>\n' + ESCAPE(horario) + '</p>' : ''}</div>`;
+  if ($('planoVer')) { $('planoVer').onclick = () => planoPdf('ver'); $('planoBajar').onclick = () => planoPdf('bajar'); }
   requestAnimationFrame(() => requestAnimationFrame(() => { const r = $('relleno'); if (r) r.style.width = m.pct + '%'; }));
   if (m.listo && !m.retirado && !celebrado) { celebrado = true; confeti(); }
 }
@@ -149,11 +150,29 @@ function confeti() {
   setTimeout(() => box.innerHTML = '', 4200);
 }
 
+// El plano en PDF es grande: el refresco automático pide solo los campos de siempre y el plano se baja únicamente al tocar el botón.
+const CAMPOS = ['org','folio','cliente','local','fecha','servicio','detalle','corte','enchape','estado','hitos','horario','actualizado','planoNombre'];
+const urlDoc = campos => `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/seguimiento/${encodeURIComponent(seg)}?` +
+  campos.map(c => 'mask.fieldPaths=' + c).join('&') + (API_KEY ? '&key=' + API_KEY : '');
+async function planoPdf(modo) {
+  const msg = $('planoMsg'); msg.textContent = 'Preparando el plano…';
+  try {
+    const r = await fetch(urlDoc(['plano', 'planoNombre']));
+    if (!r.ok) throw new Error('red');
+    const d = await r.json(), b64 = f(d, 'plano');
+    if (!b64) throw new Error('vacio');
+    const bin = atob(b64), u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    const url = URL.createObjectURL(new Blob([u8], {type: 'application/pdf'}));
+    if (modo === 'ver') { window.open(url, '_blank'); }
+    else { const a = document.createElement('a'); a.href = url; a.download = (f(d, 'planoNombre') || 'plano.pdf').replace(/[^A-Za-z0-9._-]/g, '_'); document.body.appendChild(a); a.click(); a.remove(); }
+    msg.textContent = '';
+  } catch (e) { msg.textContent = 'No se pudo abrir el plano. Inténtelo de nuevo o pídalo en el local.'; }
+}
 async function cargar() {
   document.body.classList.add('refresca');
   try {
-    const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/seguimiento/${encodeURIComponent(seg)}` + (API_KEY ? '?key=' + API_KEY : '');
-    const r = await fetch(url);
+    const r = await fetch(urlDoc(CAMPOS));
     if (r.status === 404 || r.status === 403) throw new Error('no');
     if (!r.ok) throw new Error('red');
     pintar(await r.json());
