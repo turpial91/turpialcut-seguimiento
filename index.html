@@ -132,7 +132,7 @@ function pintar(d) {
       <div class="barra" aria-label="Avance ${m.pct}%"><i id="relleno"></i></div>
       <div class="det">${m.retirado ? '¡Gracias por su compra!' : m.listo ? 'Puede pasar a retirarlo. Traiga su cédula de identidad.' : (fecha ? 'Entrega estimada: ' + ESCAPE(fecha) : 'Le avisaremos cuando esté listo.')}</div>
     </div>
-    <div class="card" style="--c:${m.c}"><ol class="pasos">${pasos}</ol><p class="det">${ESCAPE(f(d, 'detalle'))}</p>${horario && m.listo && !m.retirado ? '<p class="horario"><b>Horario de retiro</b>\n' + ESCAPE(horario) + '</p>' : ''}</div>`;
+    <div class="card" style="--c:${m.c}"><ol class="pasos">${pasos}</ol><p class="det">${ESCAPE(f(d, 'detalle'))}</p>${f(d, 'cliente') ? '<p class="det"><b>Cliente:</b> ' + ESCAPE(f(d, 'cliente')) + '</p>' : ''}${horario && m.listo && !m.retirado ? '<p class="horario"><b>Horario de retiro</b>\n' + ESCAPE(horario) + '</p>' : ''}</div>`;
   requestAnimationFrame(() => requestAnimationFrame(() => { const r = $('relleno'); if (r) r.style.width = m.pct + '%'; }));
   if (m.listo && !m.retirado && !celebrado) { celebrado = true; confeti(); }
 }
